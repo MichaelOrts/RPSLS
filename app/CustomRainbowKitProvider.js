@@ -14,7 +14,7 @@ import {
 } from "@tanstack/react-query";
 
 const config = getDefaultConfig({
-    appName: 'CryptoKDO',
+    appName: 'RPSLS',
     projectId: '4b89f8ce0af198f46977dc74b4aaba58',
     chains: [hardhat, sepolia],
     ssr: true, 

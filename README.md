@@ -1,5 +1,3 @@
-# frontend-template
+# Rock Paper Scissor Lizard and Spock game
 
-Template for frontend projects generated from nextjs with tailwind and shadcn.
-
-Viem, Wagmi and RainbowKit are also setup to web3 usage.
+A Dapps to play Rock, paper and scissor game with additional lizard and spock weapons.

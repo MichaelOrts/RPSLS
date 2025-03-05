@@ -8,8 +8,8 @@ import Footer from "@/components/Footer";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata = {
-  title: "Frontend Template",
-  description: "Template for frontend projects generated from nextjs with tailwind, shadcn and Viem , Wagmi, RainbowKit for web3.",
+  title: "Rock Paper Scissor Lizard and Spock game",
+  description: "A Dapps to play Rock, paper and scissor game with additional lizard and spock weapons.",
 };
 
 export default function RootLayout({ children }) {
