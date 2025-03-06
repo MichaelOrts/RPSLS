@@ -8,8 +8,8 @@ import Footer from "@/components/Footer";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata = {
-  title: "Rock Paper Scissor Lizard and Spock game",
-  description: "A Dapps to play Rock, paper and scissor game with additional lizard and spock weapons.",
+  title: "Rock Paper Scissors Lizard and Spock game",
+  description: "A Dapps to play Rock, paper and scissors game with additional lizard and spock weapons.",
 };
 
 export default function RootLayout({ children }) {
@@ -22,9 +22,9 @@ export default function RootLayout({ children }) {
       </head>
       <body className={`${inter.className} flex flex-col min-h-screen`}>
         <CustomRainbowKitProvider>
-          <div className="flex flex-col flex-grow min-h-screen">
+          <div className="flex flex-col flex-grow min-h-screen bg-gray-300">
             <Header />
-            <main className="flex flex-col flex-grow items-center justify-center bg-gray-100">
+            <main className="flex flex-col flex-grow items-center justify-center">
               {children}
             </main>
             <Footer />

@@ -9,7 +9,7 @@ const Header = () => {
         <div className="flex items-center space-x-2">
           <Image src="/logo.png" alt="Insert Logo Here" width={40} height={40} />
           <h1 className="text-2xl font-bold">
-            <Link href="/">Main</Link>
+            <Link href="/">Rock Scissors Paper Lizard Spock</Link>
           </h1>
         </div>
         <div>
