@@ -15,6 +15,8 @@ import { rpsAbi } from "@/constant/rps_abi";
 import { rpsBytecode } from "@/constant/rps_bytecode";
 import { keccak256, toHex, numberToHex, concatHex } from "viem";
 
+import Image from 'next/image';
+
 const Main = () => {
 
   const { address, chain } = useAccount();
@@ -24,7 +26,7 @@ const Main = () => {
   const [stake, setStake] = useState(0);
   const [salt, setSalt] = useState(0);
   const [move, setMove] = useState(0);
-  const [state, setState] = useState('NoGame');
+  const [state, setState] = useState('No Game');
   const [contractAddress, setContractAddress] = useState();
   const [lastAction, setLastAction] = useState(0);
 
@@ -122,6 +124,23 @@ const Main = () => {
     });
   }
 
+  const getMoveName = () => {
+    switch(move){
+      case 0:
+        return 'Null';
+      case 1:
+        return '/rock.jpg';
+      case 2:
+        return '/paper.jpg';
+      case 3:
+        return '/scissors.jpg';
+      case 4:
+        return '/spock.jpg';
+      case 5:
+        return '/lizard.jpg';
+    }
+  }
+
   useEffect(() => {
     if(deployData) {
       setContractAddress(deployData.contractAddress);
@@ -144,11 +163,11 @@ const Main = () => {
       setStake(readData[3]);
       setSalt(0);
       if(readData[4] == 0){
-        setState("Player1Done");
+        setState("Player 1 Done");
       }else if(stake == 0){
-        setState("GameEnded");
+        setState("Game Ended");
       }else{
-        setState("Player2Done");
+        setState("Player 2 Done");
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -188,39 +207,46 @@ const Main = () => {
 
   return (
     
-    <div className="text-4xl text-bold text-center">
-      <h1>Contract Address</h1>
-      <Input id="contractAddress" className="bg-gray-100 my-2" value={contractAddress} onChange={ e => isAddress(e.target.value) && updateContractAddress(e.target.value)} />
-      <h1>Player 1 Address</h1>
-      <Label className="bg-gray-100 my-2" >{player1}</Label>
-      <h1>Player 2 Address</h1>
-      <Input id="player2" className="bg-gray-100 my-2" value={player2} disabled={state != "NoGame"} onChange={ e => isAddress(e.target.value) && setPlayer2(e.target.value)} />
-      <h1>Value</h1>
-      <Input id="stake" type="number" className="bg-gray-100 my-2" value={stake} disabled={state != "NoGame"} onChange={ e => setStake(e.target.value)} />
-      <h1>Salt</h1>
-      <Input id="salt" type="number" className="bg-gray-100 my-2" value={salt} disabled={state === "Player1Done"} onChange={ e => setSalt(e.target.value)} />
-      <h1>Move</h1>
-      <ToggleGroup className="my-2" type="single" size="lg" onValueChange={e => {if (e) setMove(e)}} >
-        <ToggleGroupItem value={1}>Rock</ToggleGroupItem>
-        <ToggleGroupItem value={2}>Paper</ToggleGroupItem>
-        <ToggleGroupItem value={3}>Scissors</ToggleGroupItem>
-        <ToggleGroupItem value={4}>Spock</ToggleGroupItem>
-        <ToggleGroupItem value={5}>Lizard</ToggleGroupItem>
-      </ToggleGroup>
-      <h1>{move}</h1>
-      {
-        state === "NoGame" && <Button disabled={player2 === "" || move == 0} onClick={createGame}>Create Game</Button>
-        || state === "Player1Done" && <Button disabled={address != player2 || move == 0} onClick={play}>Play</Button>
-        || state === "Player2Done" && <Button disabled={address != player1} onClick={solve}>Solve</Button>
-      }
-      {state === "Player1Done" || state === "Player2Done" && <Button disabled={false && state === "Player1Done" && address != player1 || state === "Player2Done" && address != player2 && false} onClick={timeout}>Timeout</Button>}
-      <h1>{state}</h1>
-      <h1>{player1}</h1>
-      <h1>{player2}</h1>
-      <h1>{lastAction.toString()}</h1>
-      <h1>{stake.toString()}</h1>
-      <h1>{contractAddress}</h1>
-      <h1>{readError ? readError.message : ''}</h1>
+    <div className="flex flex-row justify-between text-4xl text-bold text-center">
+
+      <div className="flex flex-col w-1/3 gap-8 m-8">
+        <h1>Salt</h1>
+        <Input id="salt" type="number" className="bg-gray-100" value={salt} disabled={state === "Player 1 Done"} onChange={ e => setSalt(e.target.value)} />
+        <h1>Move</h1>
+        <ToggleGroup type="single" size="lg" onValueChange={e => {if (e) setMove(e)}} >
+          <ToggleGroupItem value={1}><Image src="/rock.jpg" alt="Rock" width={50} height={50} /></ToggleGroupItem>
+          <ToggleGroupItem value={2}><Image src="/paper.jpg" alt="Paper" width={50} height={50} /></ToggleGroupItem>
+          <ToggleGroupItem value={3}><Image src="/scissors.jpg" alt="Scissors" width={50} height={50} /></ToggleGroupItem>
+          <ToggleGroupItem value={4}><Image src="/spock.jpg" alt="Spock" width={50} height={50} /></ToggleGroupItem>
+          <ToggleGroupItem value={5}><Image src="/lizard.jpg" alt="Lizard" width={50} height={50} /></ToggleGroupItem>
+        </ToggleGroup>
+        <h1 className="self-center"><Image src={getMoveName()} alt="Null" width={100} height={100} /></h1>
+        {
+          state === "No Game" && <Button disabled={player2 === "" || move == 0} onClick={createGame}>Create Game</Button>
+          || state === "Player 1 Done" && <Button disabled={address != player2 || move == 0} onClick={play}>Play</Button>
+          || state === "Player 2 Done" && <Button disabled={address != player1} onClick={solve}>Solve</Button>
+        }
+        {state === "Player 1 Done" || state === "Player 2 Done" && <Button disabled={false && state === "Player 1 Done" && address != player1 || state === "Player 2 Done" && address != player2 && false} onClick={timeout}>Timeout</Button>}
+      </div>
+
+      <div className="flex flex-col w-1/3 gap-8 m-8">
+        <h1>Contract Address</h1>
+        <Input id="contractAddress" className="bg-gray-100" value={contractAddress} onChange={ e => isAddress(e.target.value) && updateContractAddress(e.target.value)} />
+        <h1>Value</h1>
+        <Input id="stake" type="number" className="bg-gray-100" value={stake} disabled={state != "No Game"} onChange={ e => setStake(e.target.value)} />
+        <h1>Game Status</h1>
+        <h1 className="text-blue-500">{state}</h1>
+        
+      </div>
+
+      <div className="flex flex-col w-1/3 gap-8 m-8">
+        <h1>Player 1 Address</h1>
+        <Input id='player1' className="bg-gray-100" value={player1} disabled={true} />
+        <h1>Player 2 Address</h1>
+        <Input id="player2" className="bg-gray-100" value={player2} disabled={state != "No Game"} onChange={ e => isAddress(e.target.value) && setPlayer2(e.target.value)} />
+        <Image className="self-center" src="/logo.png" alt="" width={400} height={400} />
+      </div>
+      
     </div>
     
   );

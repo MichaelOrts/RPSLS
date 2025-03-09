@@ -24,7 +24,7 @@ export default function RootLayout({ children }) {
         <CustomRainbowKitProvider>
           <div className="flex flex-col flex-grow min-h-screen bg-gray-300">
             <Header />
-            <main className="flex flex-col flex-grow items-center justify-center">
+            <main className="flex flex-col justify-center">
               {children}
             </main>
             <Footer />
