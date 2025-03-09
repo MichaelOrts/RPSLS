@@ -8,7 +8,7 @@ import { useToast } from "../hooks/use-toast";
 
 import { createContext, useActionState, useContext, useEffect, useState } from "react";
 
-import {  useReadContract, useAccount, useWriteContract, useWaitForTransactionReceipt, useTransactionReceipt, useDeployContract } from "wagmi";
+import {  useReadContracts, useAccount, useWriteContract, useWaitForTransactionReceipt, useTransactionReceipt, useDeployContract } from "wagmi";
 import { getTransaction, getTransactionReceipt } from '@wagmi/core';
 
 import { rpsAbi } from "@/constant/rps_abi";
@@ -26,7 +26,7 @@ const Main = () => {
   const [move, setMove] = useState(0);
   const [state, setState] = useState('NoGame');
   const [contractAddress, setContractAddress] = useState();
-
+  const [lastAction, setLastAction] = useState(0);
   
 
   //const {data: hash, error, setIsPending, writeContract } = useWriteContract();
@@ -48,7 +48,43 @@ const Main = () => {
     }
  });
 
- const { isSuccess, data: deployData  } = useTransactionReceipt({hash: deployHash});
+ const { data: deployData  } = useTransactionReceipt({hash: deployHash});
+
+ const { data: readData, error: readError, refetch: readRefetch } = useReadContracts({
+    allowFailure: false,
+    contracts: [
+      {
+        address: contractAddress,
+        abi: rpsAbi,
+        functionName: 'j1',
+        account: address
+      },
+      {
+        address: contractAddress,
+        abi: rpsAbi,
+        functionName: 'j2',
+        account: address
+      },
+      {
+        address: contractAddress,
+        abi: rpsAbi,
+        functionName: 'lastAction',
+        account: address
+      },
+      {
+        address: contractAddress,
+        abi: rpsAbi,
+        functionName: 'stake',
+        account: address
+      },
+      {
+        address: contractAddress,
+        abi: rpsAbi,
+        functionName: 'c2',
+        account: address
+      }
+    ]
+});
 
   const isAddress = (str) => {
     return new RegExp("0x[a-fA-F0-9]{40}$").test(str);
@@ -61,6 +97,11 @@ const Main = () => {
       value: stake,
       args: [keccak256(concatHex([numberToHex(move, {size: 1}), numberToHex(salt, {size: 32})])), player2]
     });
+  }
+
+  const updateContractAddress = (newAddress) => {
+    setContractAddress(newAddress);
+    readRefetch();
   }
 
   const play = () => {
@@ -76,16 +117,16 @@ const Main = () => {
   }
 
   const timeout = () => {
-    setMove("test");
+    setPlayer2('');
+    setPlayer1(address);
+    setContractAddress('');
+    setMove(0);
     setSalt(0);
     setState("NoGame");
   }
 
   useEffect(() => {
-    if(isSuccess) {
-      setPlayer1(address);
-      setState("Player1Done");
-      setSalt(0);
+    if(deployData) {
       setContractAddress(deployData.contractAddress);
       toast({
         title: "Deployment Ok",
@@ -96,11 +137,42 @@ const Main = () => {
       });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSuccess]);
+  }, [deployData]);
+
+  useEffect(() => {
+    if(readData){
+      setPlayer1(readData[0]);
+      setPlayer2(readData[1]);
+      setLastAction(readData[2]);
+      setStake(readData[3]);
+      setSalt(0);
+      if(readData[4] == 0){
+        setState("Player1Done");
+      }else{
+        setState("Player2Done");
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [readData]);
+
+  useEffect(() => {
+    if(readError){
+      toast({
+        title: "Read Contract Error",
+        description: readError.message,
+        className: "bg-red-200",
+        duration: 5000,
+        isClosable: true
+      });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [readError]);
 
   return (
     
     <div className="text-4xl text-bold text-center">
+      <h1>Contract Address</h1>
+      <Input id="contractAddress" className="bg-gray-100 my-2" value={contractAddress} disabled={state != "NoGame"} onChange={ e => isAddress(e.target.value) && updateContractAddress(e.target.value)} />
       <h1>Player 1 Address</h1>
       <Label className="bg-gray-100 my-2" >{player1}</Label>
       <h1>Player 2 Address</h1>
@@ -119,15 +191,18 @@ const Main = () => {
       </ToggleGroup>
       <h1>{move}</h1>
       {
-        state === "NoGame" && <Button disabled={player2 === "" || move === "Null"} onClick={createGame}>Create Game</Button>
-        || state === "Player1Done" && <Button disabled={address != player2 || move === "Null"} onClick={play}>Play</Button>
+        state === "NoGame" && <Button disabled={player2 === "" || move == 0} onClick={createGame}>Create Game</Button>
+        || state === "Player1Done" && <Button disabled={address != player2 || move == 0} onClick={play}>Play</Button>
         || state === "Player2Done" && <Button disabled={address != player1} onClick={solve}>Solve</Button>
       }
       {/*state != "NoGame" &&*/ <Button disabled={false && state === "Player1Done" && address != player1 || state === "Player2Done" && address != player2 && false} onClick={timeout}>Timeout</Button>}
       <h1>{state}</h1>
       <h1>{player1}</h1>
+      <h1>{player2}</h1>
+      <h1>{lastAction.toString()}</h1>
+      <h1>{stake.toString()}</h1>
       <h1>{contractAddress}</h1>
-      <h1>{deployHash}</h1>
+      <h1>{readError ? readError.message : ''}</h1>
     </div>
     
   );
