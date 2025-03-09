@@ -27,30 +27,14 @@ const Main = () => {
   const [state, setState] = useState('NoGame');
   const [contractAddress, setContractAddress] = useState();
   const [lastAction, setLastAction] = useState(0);
-  
-
-  //const {data: hash, error, setIsPending, writeContract } = useWriteContract();
 
   const { toast } = useToast();
 
-  const { deployContract, data: deployHash } = useDeployContract({
-    mutation: {
-      onError: (error) => {
-        toast({
-          title: "Deployment error",
-          description: error.message,
-          status: error,
-          className: "bg-red-200",
-          duration: 5000,
-          isClosable: true
-        });
-      }
-    }
- });
+  const { deployContract, data: deployHash, error : deployError } = useDeployContract();
 
- const { data: deployData  } = useTransactionReceipt({hash: deployHash});
+  const { data: deployData } = useTransactionReceipt({hash: deployHash});
 
- const { data: readData, error: readError, refetch: readRefetch } = useReadContracts({
+  const { data: readData, error: readError, refetch: readRefetch } = useReadContracts({
     allowFailure: false,
     contracts: [
       {
@@ -84,7 +68,9 @@ const Main = () => {
         account: address
       }
     ]
-});
+  });
+
+  const {writeContract, isSuccess : writeSuccess, error : writeError } = useWriteContract();
 
   const isAddress = (str) => {
     return new RegExp("0x[a-fA-F0-9]{40}$").test(str);
@@ -101,28 +87,39 @@ const Main = () => {
 
   const updateContractAddress = (newAddress) => {
     setContractAddress(newAddress);
-    readRefetch();
+    if(contractAddress){
+      readRefetch();
+    }
   }
 
-  const play = () => {
-    setMove("test");
-
-    setState("Player2Done");
+  const play = async () => {
+    await writeContract({
+      address: contractAddress,
+      abi: rpsAbi,
+      functionName: 'play',
+      value: stake,
+      args: [move]
+    });
   }
 
-  const solve = () => {
-    setMove("test");
-
-    setState("NoGame");
+  const solve = async () => {
+    await writeContract({
+      address: contractAddress,
+      abi: rpsAbi,
+      functionName: 'solve',
+      value: stake,
+      args: [move, salt]
+    });
   }
 
-  const timeout = () => {
-    setPlayer2('');
-    setPlayer1(address);
-    setContractAddress('');
-    setMove(0);
-    setSalt(0);
-    setState("NoGame");
+  const timeout = async () => {
+    const timeoutFunction = player1 === address && 'j2Timeout' 
+      || player2 === address && 'j1Timeout';
+    await writeContract({
+      address: contractAddress,
+      abi: rpsAbi,
+      functionName: timeoutFunction
+    });
   }
 
   useEffect(() => {
@@ -148,6 +145,8 @@ const Main = () => {
       setSalt(0);
       if(readData[4] == 0){
         setState("Player1Done");
+      }else if(stake == 0){
+        setState("GameEnded");
       }else{
         setState("Player2Done");
       }
@@ -156,23 +155,42 @@ const Main = () => {
   }, [readData]);
 
   useEffect(() => {
-    if(readError){
+    if(writeSuccess) {
       toast({
-        title: "Read Contract Error",
-        description: readError.message,
+        title: "Write Ok",
+        className: "bg-lime-200",
+        duration: 5000,
+        isClosable: true
+      });
+      readRefetch();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [writeSuccess]);
+
+  useEffect(() => {
+    const error = deployError && 'Deployment Error'
+      || readError && 'Read Contract Error'
+      || writeError && 'Write Contract Error';
+    const message = deployError && deployError.message
+    || readError && readError.message
+    || writeError && writeError.message;
+    if(error){
+      toast({
+        title: error,
+        description: message,
         className: "bg-red-200",
         duration: 5000,
         isClosable: true
       });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [readError]);
+  }, [deployError, readError, writeError]);
 
   return (
     
     <div className="text-4xl text-bold text-center">
       <h1>Contract Address</h1>
-      <Input id="contractAddress" className="bg-gray-100 my-2" value={contractAddress} disabled={state != "NoGame"} onChange={ e => isAddress(e.target.value) && updateContractAddress(e.target.value)} />
+      <Input id="contractAddress" className="bg-gray-100 my-2" value={contractAddress} onChange={ e => isAddress(e.target.value) && updateContractAddress(e.target.value)} />
       <h1>Player 1 Address</h1>
       <Label className="bg-gray-100 my-2" >{player1}</Label>
       <h1>Player 2 Address</h1>
@@ -180,7 +198,7 @@ const Main = () => {
       <h1>Value</h1>
       <Input id="stake" type="number" className="bg-gray-100 my-2" value={stake} disabled={state != "NoGame"} onChange={ e => setStake(e.target.value)} />
       <h1>Salt</h1>
-      <Input id="salt" type="number" className="bg-gray-100 my-2" value={salt} disabled={state != "NoGame"} onChange={ e => setSalt(e.target.value)} />
+      <Input id="salt" type="number" className="bg-gray-100 my-2" value={salt} disabled={state === "Player1Done"} onChange={ e => setSalt(e.target.value)} />
       <h1>Move</h1>
       <ToggleGroup className="my-2" type="single" size="lg" onValueChange={e => {if (e) setMove(e)}} >
         <ToggleGroupItem value={1}>Rock</ToggleGroupItem>
@@ -195,7 +213,7 @@ const Main = () => {
         || state === "Player1Done" && <Button disabled={address != player2 || move == 0} onClick={play}>Play</Button>
         || state === "Player2Done" && <Button disabled={address != player1} onClick={solve}>Solve</Button>
       }
-      {/*state != "NoGame" &&*/ <Button disabled={false && state === "Player1Done" && address != player1 || state === "Player2Done" && address != player2 && false} onClick={timeout}>Timeout</Button>}
+      {state === "Player1Done" || state === "Player2Done" && <Button disabled={false && state === "Player1Done" && address != player1 || state === "Player2Done" && address != player2 && false} onClick={timeout}>Timeout</Button>}
       <h1>{state}</h1>
       <h1>{player1}</h1>
       <h1>{player2}</h1>
