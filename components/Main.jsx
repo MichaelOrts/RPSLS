@@ -19,6 +19,11 @@ const Main = () => {
 
   const { address } = useAccount();
 
+  const timeOptions = {
+    minute: 'numeric',
+    second: 'numeric'
+  };
+
   // States attributes of contract
   const [player1, setPlayer1] = useState(address);
   const [player2, setPlayer2] = useState('');
@@ -28,6 +33,7 @@ const Main = () => {
   const [state, setState] = useState('No Game'); // state status of game computed from data contract ("No Game", "Player 1 Done", "Player 2 Done", "Game Ended")
   const [contractAddress, setContractAddress] = useState();
   const [lastAction, setLastAction] = useState(0);
+  const [counter, setCounter] = useState('');
 
   const { toast } = useToast();
 
@@ -143,7 +149,7 @@ const Main = () => {
   const getMoveName = () => {
     switch(move){
       case 0:
-        return 'Null';
+        return '/null.png';
       case 1:
         return '/rock.jpg';
       case 2:
@@ -227,6 +233,16 @@ const Main = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deployError, readError, writeError]);
 
+  // timeout counter
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if(lastAction){
+        setCounter(new Date(Number(lastAction) * 1000 + 60000 * 5 - Date.now()));
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [lastAction]);
+
   return (
     <div className="flex flex-row justify-between text-4xl text-bold text-center">
       <div className="flex flex-col w-1/3 gap-8 m-8">
@@ -241,12 +257,14 @@ const Main = () => {
           <ToggleGroupItem value={5}><Image src="/lizard.jpg" alt="Lizard" width={50} height={50} /></ToggleGroupItem>
         </ToggleGroup>
         <h1 className="self-center"><Image src={getMoveName()} alt="Null" width={100} height={100} /></h1>
-        {
-          state === "No Game" && <Button disabled={player2 === "" || move == 0} onClick={createGame}>Create Game</Button>
-          || state === "Player 1 Done" && <Button disabled={address != player2 || move == 0} onClick={play}>Play</Button>
-          || state === "Player 2 Done" && <Button disabled={address != player1} onClick={solve}>Solve</Button>
-        }
-        {state === "Player 1 Done" || state === "Player 2 Done" && <Button disabled={false && state === "Player 1 Done" && address != player1 || state === "Player 2 Done" && address != player2 && false} onClick={timeout}>Timeout</Button>}
+        <div className="flex justify-evenly">
+          {
+            state === "No Game" && <Button disabled={player2 === "" || move == 0} onClick={createGame}>Create Game</Button>
+            || state === "Player 1 Done" && <Button disabled={address != player2 || move == 0} onClick={play}>Play</Button>
+            || state === "Player 2 Done" && <Button disabled={address != player1} onClick={solve}>Solve</Button>
+          }
+          {(state === "Player 1 Done" || state === "Player 2 Done") && <Button disabled={counter > 0 || (state === "Player 1 Done" && address != player1 || state === "Player 2 Done" && address != player2)} onClick={timeout}>Timeout</Button>}
+        </div>
       </div>
       <div className="flex flex-col w-1/3 gap-8 m-8">
         <h1>Contract Address</h1>
@@ -255,6 +273,8 @@ const Main = () => {
         <Input id="stake" type="number" className="bg-gray-100" value={stake} disabled={state != "No Game"} onChange={ e => setStake(e.target.value)} />
         <h1>Game Status</h1>
         <h1 className="text-blue-500">{state}</h1>
+        <h1>Timeout</h1>
+        <h1 className={counter < 0 ? "text-red-600" : "text-green-600"}>{counter.toLocaleString('fr-FR', timeOptions)}</h1>
       </div>
       <div className="flex flex-col w-1/3 gap-8 m-8">
         <h1>Player 1 Address</h1>
