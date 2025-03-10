@@ -1,41 +1,45 @@
 'use client'
 
-import { Label } from "./ui/label";
 import { Input } from "./ui/input";
 import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group";
 import { Button } from "./ui/button";
 import { useToast } from "../hooks/use-toast";
 
-import { createContext, useActionState, useContext, useEffect, useState } from "react";
+import Image from 'next/image';
 
-import {  useReadContracts, useAccount, useWriteContract, useWaitForTransactionReceipt, useTransactionReceipt, useDeployContract } from "wagmi";
-import { getTransaction, getTransactionReceipt } from '@wagmi/core';
+import { useEffect, useState } from "react";
+
+import {  useReadContracts, useAccount, useWriteContract, useTransactionReceipt, useDeployContract } from "wagmi";
+import { keccak256, numberToHex, concatHex } from "viem";
 
 import { rpsAbi } from "@/constant/rps_abi";
 import { rpsBytecode } from "@/constant/rps_bytecode";
-import { keccak256, toHex, numberToHex, concatHex } from "viem";
-
-import Image from 'next/image';
 
 const Main = () => {
 
-  const { address, chain } = useAccount();
+  const { address } = useAccount();
 
+  // States attributes of contract
   const [player1, setPlayer1] = useState(address);
   const [player2, setPlayer2] = useState('');
   const [stake, setStake] = useState(0);
   const [salt, setSalt] = useState(0);
   const [move, setMove] = useState(0);
-  const [state, setState] = useState('No Game');
+  const [state, setState] = useState('No Game'); // state status of game computed from data contract ("No Game", "Player 1 Done", "Player 2 Done", "Game Ended")
   const [contractAddress, setContractAddress] = useState();
   const [lastAction, setLastAction] = useState(0);
 
   const { toast } = useToast();
 
+  // Contract hooks
+
+  // deploy contract hook
   const { deployContract, data: deployHash, error : deployError } = useDeployContract();
 
+  // transaction receipt hook for deployment
   const { data: deployData } = useTransactionReceipt({hash: deployHash});
 
+  // read contract hook to retrieve all datas
   const { data: readData, error: readError, refetch: readRefetch } = useReadContracts({
     allowFailure: false,
     contracts: [
@@ -72,12 +76,12 @@ const Main = () => {
     ]
   });
 
+  // write contract hook
   const {writeContract, isSuccess : writeSuccess, error : writeError } = useWriteContract();
 
-  const isAddress = (str) => {
-    return new RegExp("0x[a-fA-F0-9]{40}$").test(str);
-  }
+  // Buttons functions => call to contract
 
+  // deploy new contract from connected player as player 1 with current player 2, stake and hash move computed from current move and salt
   const createGame = async () => {
     await deployContract({
       abi: rpsAbi,
@@ -87,13 +91,7 @@ const Main = () => {
     });
   }
 
-  const updateContractAddress = (newAddress) => {
-    setContractAddress(newAddress);
-    if(contractAddress){
-      readRefetch();
-    }
-  }
-
+  // call play function with current stake and move
   const play = async () => {
     await writeContract({
       address: contractAddress,
@@ -104,6 +102,7 @@ const Main = () => {
     });
   }
 
+  // call solve function with current move and salt
   const solve = async () => {
     await writeContract({
       address: contractAddress,
@@ -114,6 +113,7 @@ const Main = () => {
     });
   }
 
+  // call timeout function switch player connected
   const timeout = async () => {
     const timeoutFunction = player1 === address && 'j2Timeout' 
       || player2 === address && 'j1Timeout';
@@ -124,6 +124,22 @@ const Main = () => {
     });
   }
 
+  // set new contract address and refetch data if it is not empty
+  const updateContractAddress = (newAddress) => {
+    setContractAddress(newAddress);
+    if(contractAddress){
+      readRefetch();
+    }
+  }
+
+  // UTILITY METHODS
+
+  // check if str is an address
+  const isAddress = (str) => {
+    return new RegExp("0x[a-fA-F0-9]{40}$").test(str);
+  }
+
+  // return picture file name switch move value
   const getMoveName = () => {
     switch(move){
       case 0:
@@ -141,6 +157,9 @@ const Main = () => {
     }
   }
 
+  // USE EFFECT HOOKS
+
+  // toast on valid deployment 
   useEffect(() => {
     if(deployData) {
       setContractAddress(deployData.contractAddress);
@@ -155,6 +174,7 @@ const Main = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deployData]);
 
+  // update state on read contract
   useEffect(() => {
     if(readData){
       setPlayer1(readData[0]);
@@ -173,6 +193,7 @@ const Main = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [readData]);
 
+  // toast on write contract success
   useEffect(() => {
     if(writeSuccess) {
       toast({
@@ -186,6 +207,7 @@ const Main = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [writeSuccess]);
 
+  // toast on call contract error
   useEffect(() => {
     const error = deployError && 'Deployment Error'
       || readError && 'Read Contract Error'
@@ -206,9 +228,7 @@ const Main = () => {
   }, [deployError, readError, writeError]);
 
   return (
-    
     <div className="flex flex-row justify-between text-4xl text-bold text-center">
-
       <div className="flex flex-col w-1/3 gap-8 m-8">
         <h1>Salt</h1>
         <Input id="salt" type="number" className="bg-gray-100" value={salt} disabled={state === "Player 1 Done"} onChange={ e => setSalt(e.target.value)} />
@@ -228,7 +248,6 @@ const Main = () => {
         }
         {state === "Player 1 Done" || state === "Player 2 Done" && <Button disabled={false && state === "Player 1 Done" && address != player1 || state === "Player 2 Done" && address != player2 && false} onClick={timeout}>Timeout</Button>}
       </div>
-
       <div className="flex flex-col w-1/3 gap-8 m-8">
         <h1>Contract Address</h1>
         <Input id="contractAddress" className="bg-gray-100" value={contractAddress} onChange={ e => isAddress(e.target.value) && updateContractAddress(e.target.value)} />
@@ -236,9 +255,7 @@ const Main = () => {
         <Input id="stake" type="number" className="bg-gray-100" value={stake} disabled={state != "No Game"} onChange={ e => setStake(e.target.value)} />
         <h1>Game Status</h1>
         <h1 className="text-blue-500">{state}</h1>
-        
       </div>
-
       <div className="flex flex-col w-1/3 gap-8 m-8">
         <h1>Player 1 Address</h1>
         <Input id='player1' className="bg-gray-100" value={player1} disabled={true} />
@@ -246,9 +263,7 @@ const Main = () => {
         <Input id="player2" className="bg-gray-100" value={player2} disabled={state != "No Game"} onChange={ e => isAddress(e.target.value) && setPlayer2(e.target.value)} />
         <Image className="self-center" src="/logo.png" alt="" width={400} height={400} />
       </div>
-      
     </div>
-    
   );
 }
   
